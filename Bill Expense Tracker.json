@@ -1,0 +1,201 @@
+{
+  "name": "Bill Expense Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Bill Upload Form",
+        "formDescription": "Upload an image of your bill to extract expense information",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Bill Image",
+              "fieldType": "file",
+              "fieldName": "billImage",
+              "multipleFiles": false,
+              "acceptFileTypes": ".jpg,.jpeg,.png,.pdf",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e83ebde1-93b7-4c5a-adbb-5473fd715003",
+      "name": "Upload Bill Image",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        304
+      ],
+      "webhookId": "0d6fa6fa-3e57-415d-98ea-e2cd999f2c38"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "Extract the following information from this bill image and return it in JSON format with these exact fields: expenseName (description of the purchase), expenseAmount (total amount as a number), and expenseDate (in YYYY-MM-DD format). Example: {\"expenseName\": \"Coffee\", \"expenseAmount\": 5.50, \"expenseDate\": \"2024-01-15\"}",
+        "inputType": "binary",
+        "binaryPropertyName": "billImage",
+        "options": {}
+      },
+      "id": "3b25a306-1cb9-4aa6-a22c-beccb6fd140c",
+      "name": "Extract Bill Data",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        304
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "MCwXjEME24Eg8Ewi",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1DOpuD3Wjj12Oy1KUeNBZkTujseBqqv_tipJsSO-Qy3M",
+          "mode": "list",
+          "cachedResultName": "Bill Tracker for Employees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DOpuD3Wjj12Oy1KUeNBZkTujseBqqv_tipJsSO-Qy3M/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DOpuD3Wjj12Oy1KUeNBZkTujseBqqv_tipJsSO-Qy3M/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "EXpense Name": "={{ $json.expenseName }}",
+            "Expense Date": "={{ $json.expenseDate }}",
+            "Expense Amount": "={{ $json.expenseAmount }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "EXpense Name",
+              "displayName": "EXpense Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Expense Date",
+              "displayName": "Expense Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Expense Amount",
+              "displayName": "Expense Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "7b168259-fea9-432e-96ca-b75131d28635",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        912,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YgYygxMFGDUWiCmT",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const input = $input.item.json;\n\nconst text = JSON.stringify(input)\n    .match(/```json\\s*([\\s\\S]*?)\\s*```/i)?.[1];\n\nconst cleaned = text\n    .replace(/\\\\n/g, '\\n')\n    .replace(/\\\\\"/g, '\"');\n\nreturn {\n    json: JSON.parse(cleaned)\n};"
+      },
+      "id": "6c898801-49dc-45cc-b791-4b6dfe2d0093",
+      "name": "Parse JSON Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Upload Bill Image": {
+      "main": [
+        [
+          {
+            "node": "Extract Bill Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Bill Data": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse JSON Response": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a2d3ef63-e800-4c94-8bd2-fd8990489fd3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "954da200686fcd30584933d3452230f6a15e112332b7c75b1cb237f4e311936e"
+  },
+  "nodeGroups": [],
+  "id": "rsWfb4ArCppiVpLu",
+  "tags": []
+}
